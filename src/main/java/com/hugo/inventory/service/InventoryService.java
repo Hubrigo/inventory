@@ -11,6 +11,7 @@ import com.hugo.inventory.repository.IdempotencyRecordRepository;
 import com.hugo.inventory.repository.InventoryRepository;
 import com.hugo.inventory.util.IdempotencyUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -31,6 +33,8 @@ public class InventoryService {
 
     public InventoryResponse create(InventoryRequest request) {
 
+        log.info("Creating inventory for productId={}, available={}",
+                request.getProductId(), request.getAvailable());
         productClient.validateProductExists(request.getProductId()).join();
 
         if (inventoryRepository.existsByProductId(request.getProductId())) {
@@ -42,6 +46,9 @@ public class InventoryService {
 
         Inventory inventory = inventoryMapper.toEntity(request);
         Inventory saved = inventoryRepository.save(inventory);
+
+        log.info("Inventory created successfully for productId={}", request.getProductId());
+
         return inventoryMapper.toResponse(saved);
     }
 
@@ -57,6 +64,8 @@ public class InventoryService {
 
     @Transactional
     public PurchaseResponse purchase(PurchaseRequest request, String idempotencyKey) {
+        log.info("Processing purchase for productId={}, quantity={}",
+                request.getProductId(), request.getQuantity());
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -104,6 +113,10 @@ public class InventoryService {
         );
 
         if (updatedRows == 0) {
+
+            log.warn("Insufficient stock for productId={}, requestedQuantity={}",
+                    request.getProductId(), request.getQuantity());
+
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Insufficient stock"
@@ -138,6 +151,11 @@ public class InventoryService {
                     "Failed to store idempotent response"
             );
         }
+
+        log.info("Purchase completed for productId={}, purchasedQuantity={}, remainingStock={}",
+                updatedInventory.getProductId(),
+                request.getQuantity(),
+                updatedInventory.getAvailable());
 
         return response;
     }

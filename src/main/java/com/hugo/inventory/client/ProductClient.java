@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.MDC;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +36,11 @@ public class ProductClient {
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-API-Key", apiKey);
+
+            String correlationId = MDC.get("correlationId");
+            if (correlationId != null && !correlationId.isBlank()) {
+                headers.set("X-Correlation-Id", correlationId);
+            }
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
