@@ -28,7 +28,10 @@ public class InventoryController {
     }
 
     @PostMapping("/purchase")
-    public ResponseEntity<PurchaseResponse> purchase(@Valid @RequestBody PurchaseRequest request) {
-        return ResponseEntity.ok(inventoryService.purchase(request));
+    public ResponseEntity<PurchaseResponse> purchase(
+            @Valid @RequestBody PurchaseRequest request,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey
+    ) {
+        return ResponseEntity.ok(inventoryService.purchase(request, idempotencyKey));
     }
 }
